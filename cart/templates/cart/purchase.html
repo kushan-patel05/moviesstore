@@ -7,8 +7,79 @@
         <h2>Purchase Completed</h2>
         <hr />
         <p>Congratulations, purchase completed. Order number is: <b>#{{ template_data.order_id }}</b></p>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#feedbackModal">Leave optional feedback</button>
       </div>
     </div>
   </div>
+</div>
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">How was the checkout?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="feedbackForm">
+          <input type="hidden" name="order_id" value="{{ template_data.order_id }}" />
+          <div class="mb-3">
+            <label class="form-label">Name (optional)</label>
+            <input name="name" type="text" class="form-control" placeholder="Anonymous if left empty" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Your thoughts</label>
+            <textarea name="statement" class="form-control" rows="4" placeholder="Share a short statement"></textarea>
+          </div>
+        </form>
+        <div class="alert alert-success d-none" id="feedbackSuccess">Thanks! Your feedback was submitted.</div>
+        <div class="alert alert-danger d-none" id="feedbackError">Unable to submit feedback. Please try again.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="feedbackSubmitBtn">Submit</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const form = document.getElementById('feedbackForm');
+      const btn = document.getElementById('feedbackSubmitBtn');
+      const ok = document.getElementById('feedbackSuccess');
+      const err = document.getElementById('feedbackError');
+      if (!form || !btn) return;
+      btn.addEventListener('click', async () => {
+        ok.classList.add('d-none');
+        err.classList.add('d-none');
+        const formData = new FormData(form);
+        try {
+          const resp = await fetch('{% url "cart.feedback.submit" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            body: formData,
+          });
+          if (!resp.ok) throw new Error('bad');
+          ok.classList.remove('d-none');
+          form.reset();
+        } catch (e) {
+          err.classList.remove('d-none');
+        }
+      });
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+    });
+  </script>
 </div>
 {% endblock content %}

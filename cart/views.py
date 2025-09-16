@@ -2,8 +2,10 @@ from django.shortcuts import render
 from django.shortcuts import get_object_or_404, redirect
 from movies.models import Movie
 from .utils import calculate_cart_total
-from .models import Order, Item
+from .models import Order, Item, CheckoutFeedback
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
 
 def index(request):
     cart_total = 0
@@ -60,3 +62,23 @@ def purchase(request):
     template_data['title'] = 'Purchase confirmation'
     template_data['order_id'] = order.id
     return render(request, 'cart/purchase.html', {'template_data': template_data})
+
+@require_POST
+@login_required
+def submit_feedback(request):
+    order_id = request.POST.get('order_id')
+    name = request.POST.get('name', '')
+    statement = request.POST.get('statement', '')
+    if not statement or not order_id:
+        return JsonResponse({ 'ok': False, 'error': 'Missing fields' }, status=400)
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+    except Order.DoesNotExist:
+        return JsonResponse({ 'ok': False, 'error': 'Order not found' }, status=404)
+    CheckoutFeedback.objects.create(order=order, name=name, statement=statement)
+    return JsonResponse({ 'ok': True })
+
+def feedback_list(request):
+    entries = CheckoutFeedback.objects.order_by('-created_at')
+    template_data = { 'title': 'Checkout Feedback', 'entries': entries }
+    return render(request, 'cart/feedback_list.html', { 'template_data': template_data })
